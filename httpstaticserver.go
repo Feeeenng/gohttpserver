@@ -22,6 +22,7 @@ import (
 	"regexp"
 
 	"github.com/go-yaml/yaml"
+	"github.com/goji/httpauth"
 	"github.com/gorilla/mux"
 	"github.com/shogo82148/androidbinary/apk"
 )
@@ -124,6 +125,12 @@ func (s *HTTPStaticServer) getRealPath(r *http.Request) string {
 	return filepath.ToSlash(realPath)
 }
 
+func httpAuth(s *HTTPStaticServer) {
+	userpass := strings.SplitN(gcfg.Auth.HTTP, ":", 2)
+	user, pass := userpass[0], userpass[1]
+	httpauth.SimpleBasicAuth(user, pass)(s)
+}
+
 func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
 	path := mux.Vars(r)["path"]
 	realPath := s.getRealPath(r)
@@ -157,6 +164,7 @@ func (s *HTTPStaticServer) hIndex(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if r.FormValue("download") == "true" {
+			httpAuth(s)
 			w.Header().Set("Content-Disposition", "attachment; filename="+strconv.Quote(filepath.Base(path)))
 		}
 		http.ServeFile(w, r, realPath)

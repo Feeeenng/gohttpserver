@@ -148,6 +148,17 @@ func fixPrefix(prefix string) string {
 	return prefix
 }
 
+func authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		if strings.HasSuffix(path, "download=true") {
+			next.ServeHTTP(w, r)
+			return
+		}
+
+	})
+}
+
 func main() {
 	if err := parseFlags(); err != nil {
 		log.Fatal(err)
@@ -247,6 +258,10 @@ func main() {
 		Handler: mainRouter,
 		Addr:    gcfg.Addr,
 	}
+
+	http.Handle("/", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, "This is a protected route.")
+	})))
 
 	var err error
 	if gcfg.Key != "" && gcfg.Cert != "" {
